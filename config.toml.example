@@ -1,0 +1,20 @@
+[general]
+stealth_mode = true
+opacity = 0.85
+text_darkness = 10
+
+[hotkey]
+panic_key = "ctrl+shift+h"
+
+[ai]
+backend = "ollama"
+ollama_model = "llama3"
+ollama_url = "http://localhost:11434"
+claude_api_key = ""
+claude_model = "claude-sonnet-4-20250514"
+
+[ui]
+font_family = "Monospace"
+font_size = 13
+window_width = 500
+window_height = 400
