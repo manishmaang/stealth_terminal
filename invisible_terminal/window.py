@@ -1,3 +1,4 @@
+import subprocess
 import threading
 
 import gi
@@ -36,10 +37,23 @@ class InvisibleWindow(Adw.ApplicationWindow):
         self.connect("realize", self._on_realize)
 
     def _on_realize(self, widget):
-        # Always-on-top: GTK4/GNOME honors this on Wayland
-        surface = self.get_surface()
-        if hasattr(surface, "set_keep_above"):
-            surface.set_keep_above(True)
+        # Always-on-top via GNOME Shell D-Bus eval (Wayland has no client-side API)
+        GLib.timeout_add(300, self._set_always_on_top)
+
+    def _set_always_on_top(self):
+        try:
+            subprocess.Popen(
+                ["gdbus", "call", "--session",
+                 "--dest", "org.gnome.Shell",
+                 "--object-path", "/org/gnome/Shell",
+                 "--method", "org.gnome.Shell.Eval",
+                 "global.display.focus_window.make_above()"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        except Exception:
+            pass
+        return False
 
     def _build_ui(self):
         # Header bar - minimal
@@ -183,3 +197,4 @@ class InvisibleWindow(Adw.ApplicationWindow):
         else:
             self.set_visible(True)
             self.present()
+            GLib.timeout_add(300, self._set_always_on_top)

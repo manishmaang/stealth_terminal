@@ -8,7 +8,7 @@ DEFAULTS = {
     "general": {
         "stealth_mode": True,
         "opacity": 0.85,
-        "text_darkness": 10,
+        "text_darkness": 18,
     },
     "hotkey": {
         "panic_key": "ctrl+shift+h",
