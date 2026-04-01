@@ -1,4 +1,3 @@
-import subprocess
 import threading
 
 import gi
@@ -24,6 +23,7 @@ class InvisibleWindow(Adw.ApplicationWindow):
         self._darkness = config["general"]["text_darkness"]
         self._opacity = config["general"]["opacity"]
         self._streaming = False
+        self._keep_above = True
 
         ui = config["ui"]
         self.set_default_size(ui["window_width"], ui["window_height"])
@@ -33,27 +33,6 @@ class InvisibleWindow(Adw.ApplicationWindow):
         self._build_ui()
         self._setup_shortcuts()
         self._apply_stealth()
-
-        self.connect("realize", self._on_realize)
-
-    def _on_realize(self, widget):
-        # Always-on-top via GNOME Shell D-Bus eval (Wayland has no client-side API)
-        GLib.timeout_add(300, self._set_always_on_top)
-
-    def _set_always_on_top(self):
-        try:
-            subprocess.Popen(
-                ["gdbus", "call", "--session",
-                 "--dest", "org.gnome.Shell",
-                 "--object-path", "/org/gnome/Shell",
-                 "--method", "org.gnome.Shell.Eval",
-                 "global.display.focus_window.make_above()"],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-        except Exception:
-            pass
-        return False
 
     def _build_ui(self):
         # Header bar - minimal
@@ -107,6 +86,11 @@ class InvisibleWindow(Adw.ApplicationWindow):
             return True
         elif ctrl and keyval == Gdk.KEY_Down:
             self._adjust_darkness(-1)
+            return True
+        elif ctrl and keyval == Gdk.KEY_t:
+            self._keep_above = not self._keep_above
+            state = "ON" if self._keep_above else "OFF"
+            self.chat_view.append_system_message(f"Always-on-top: {state}")
             return True
         elif ctrl and keyval == Gdk.KEY_q:
             self.close()
@@ -197,4 +181,3 @@ class InvisibleWindow(Adw.ApplicationWindow):
         else:
             self.set_visible(True)
             self.present()
-            GLib.timeout_add(300, self._set_always_on_top)

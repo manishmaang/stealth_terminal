@@ -14,6 +14,17 @@ def generate_css(stealth: bool, darkness: int, opacity: float,
         return f"""
 window {{
     background-color: rgba(0, 0, 0, {bg_alpha});
+    border: none;
+    box-shadow: none;
+    outline: none;
+}}
+
+window:backdrop,
+window:active,
+window:focus {{
+    border: none;
+    box-shadow: none;
+    outline: none;
 }}
 
 .chat-container {{
@@ -21,7 +32,7 @@ window {{
 }}
 
 .chat-view {{
-    background-color: #000000;
+    background-color: rgba(0, 0, 0, {bg_alpha});
     color: {text_color};
     font-family: "{font_family}";
     font-size: {font_size}px;
@@ -29,7 +40,7 @@ window {{
 }}
 
 .chat-view text {{
-    background-color: #000000;
+    background-color: transparent;
     color: {text_color};
 }}
 
@@ -42,32 +53,43 @@ window {{
 }}
 
 .input-entry {{
-    background-color: #000000;
+    background-color: rgba(0, 0, 0, {bg_alpha});
     color: {text_color};
     border: 1px solid {border_color};
     font-family: "{font_family}";
     font-size: {font_size}px;
     padding: 6px 10px;
     min-height: 28px;
+    outline: none;
+    box-shadow: none;
 }}
 
 .input-entry:focus {{
     border-color: {darkness_to_hex(min(darkness + 6, 30))};
     outline: none;
+    box-shadow: none;
 }}
 
 .send-button {{
-    background-color: #000000;
+    background-color: rgba(0, 0, 0, {bg_alpha});
     color: {text_color};
     border: 1px solid {border_color};
     padding: 6px 12px;
     min-height: 28px;
+    outline: none;
+    box-shadow: none;
+}}
+
+.send-button:focus {{
+    outline: none;
+    box-shadow: none;
 }}
 
 headerbar {{
     background-color: rgba(0, 0, 0, {bg_alpha});
     border: none;
     box-shadow: none;
+    outline: none;
     min-height: 24px;
 }}
 
@@ -79,6 +101,9 @@ headerbar title {{
 headerbar windowcontrols button {{
     color: {border_color};
     opacity: 0.3;
+    border: none;
+    box-shadow: none;
+    outline: none;
 }}
 
 scrollbar {{
@@ -93,18 +118,36 @@ scrollbar {{
 }}
 
 .model-selector {{
-    background-color: #000000;
+    background-color: rgba(0, 0, 0, {bg_alpha});
     color: {text_color};
     border: 1px solid {border_color};
     font-size: {font_size - 2}px;
     min-height: 20px;
     padding: 2px 6px;
+    outline: none;
+    box-shadow: none;
+}}
+
+.model-selector:focus {{
+    outline: none;
+    box-shadow: none;
 }}
 """
     else:
         return f"""
 window {{
     background-color: rgba(30, 30, 30, 0.95);
+    border: none;
+    box-shadow: none;
+    outline: none;
+}}
+
+window:backdrop,
+window:active,
+window:focus {{
+    border: none;
+    box-shadow: none;
+    outline: none;
 }}
 
 .chat-container {{
@@ -112,7 +155,7 @@ window {{
 }}
 
 .chat-view {{
-    background-color: #1e1e1e;
+    background-color: rgba(30, 30, 30, 0.95);
     color: #e0e0e0;
     font-family: "{font_family}";
     font-size: {font_size}px;
@@ -120,7 +163,7 @@ window {{
 }}
 
 .chat-view text {{
-    background-color: #1e1e1e;
+    background-color: transparent;
     color: #e0e0e0;
 }}
 
@@ -133,31 +176,38 @@ window {{
 }}
 
 .input-entry {{
-    background-color: #2a2a2a;
+    background-color: rgba(42, 42, 42, 0.95);
     color: #e0e0e0;
     border: 1px solid #444444;
     font-family: "{font_family}";
     font-size: {font_size}px;
     padding: 6px 10px;
     min-height: 28px;
+    outline: none;
+    box-shadow: none;
 }}
 
 .input-entry:focus {{
     border-color: #6699cc;
     outline: none;
+    box-shadow: none;
 }}
 
 .send-button {{
-    background-color: #333333;
+    background-color: rgba(51, 51, 51, 0.95);
     color: #e0e0e0;
     border: 1px solid #444444;
     padding: 6px 12px;
     min-height: 28px;
+    outline: none;
+    box-shadow: none;
 }}
 
 headerbar {{
     background-color: rgba(30, 30, 30, 0.95);
-    border-bottom: 1px solid #444444;
+    border: none;
+    box-shadow: none;
+    outline: none;
     min-height: 24px;
 }}
 
@@ -178,12 +228,14 @@ scrollbar {{
 }}
 
 .model-selector {{
-    background-color: #2a2a2a;
+    background-color: rgba(42, 42, 42, 0.95);
     color: #e0e0e0;
     border: 1px solid #444444;
     font-size: {font_size - 2}px;
     min-height: 20px;
     padding: 2px 6px;
+    outline: none;
+    box-shadow: none;
 }}
 """
 

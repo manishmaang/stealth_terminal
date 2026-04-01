@@ -62,8 +62,8 @@ class InvisibleTerminalApp(Adw.Application):
             f"Invisible Terminal ready | Backend: {self.backend.name()}"
         )
         self.win.chat_view.append_system_message(
-            "Ctrl+S: toggle stealth | Ctrl+Up/Down: adjust darkness | "
-            "Ctrl+L: clear | Ctrl+Q: quit"
+            "Ctrl+S: stealth | Ctrl+Up/Down: darkness | "
+            "Ctrl+T: pin on top | Ctrl+L: clear | Ctrl+Q: quit"
         )
 
         self.win.present()
@@ -71,7 +71,7 @@ class InvisibleTerminalApp(Adw.Application):
 
         # Register panic hotkey
         self.hotkey = PanicHotkey(on_activate=self._on_hotkey)
-        self.hotkey.register_portal_shortcut()
+        self.hotkey.register()
 
     def _on_hotkey(self, action="toggle"):
         if self.win:

@@ -2,24 +2,22 @@ import gi
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gio, GLib
 
-PORTAL_BUS_NAME = "org.freedesktop.portal.Desktop"
-PORTAL_OBJECT_PATH = "/org/freedesktop/portal/desktop"
-GLOBAL_SHORTCUTS_IFACE = "org.freedesktop.portal.GlobalShortcuts"
-
 
 class PanicHotkey:
-    """Global panic hotkey using XDG GlobalShortcuts portal.
+    """Global panic hotkey using GNOME Shell GrabAccelerator D-Bus API.
 
-    Falls back to a simple D-Bus service that can be triggered externally
-    via: dbus-send --session --dest=com.invisible.terminal \
-         /com/invisible/terminal com.invisible.terminal.Toggle
+    This is the native GNOME way to register global keyboard shortcuts.
+    Falls back to a D-Bus service that can be triggered externally via:
+        dbus-send --session --dest=com.invisible.terminal \
+            /com/invisible/terminal com.invisible.terminal.Toggle
     """
 
     def __init__(self, on_activate):
         self.on_activate = on_activate
-        self._session_path = None
-        self._portal_working = False
+        self._action_id = 0
+        self._signal_sub_id = 0
         self._dbus_owner_id = 0
+        self._bus = None
         self._setup_dbus_service()
 
     def _setup_dbus_service(self):
@@ -57,87 +55,68 @@ class PanicHotkey:
             GLib.idle_add(self.on_activate, method_name.lower())
         invocation.return_value(None)
 
-    def register_portal_shortcut(self):
+    def register(self):
         try:
-            bus = Gio.bus_get_sync(Gio.BusType.SESSION)
-            bus.call(
-                PORTAL_BUS_NAME,
-                PORTAL_OBJECT_PATH,
-                GLOBAL_SHORTCUTS_IFACE,
-                "CreateSession",
-                GLib.Variant("(a{sv})", [{}]),
+            self._bus = Gio.bus_get_sync(Gio.BusType.SESSION)
+
+            # Subscribe to AcceleratorActivated signal first
+            self._signal_sub_id = self._bus.signal_subscribe(
+                "org.gnome.Shell",
+                "org.gnome.Shell",
+                "AcceleratorActivated",
+                "/org/gnome/Shell",
                 None,
+                Gio.DBusSignalFlags.NONE,
+                self._on_accelerator_activated,
+            )
+
+            # Grab Ctrl+Shift+H globally via GNOME Shell
+            # modeFlags: 0 = normal mode, grabFlags: 0 = none
+            result = self._bus.call_sync(
+                "org.gnome.Shell",
+                "/org/gnome/Shell",
+                "org.gnome.Shell",
+                "GrabAccelerator",
+                GLib.Variant("(suu)", ("<Ctrl><Shift>h", 0, 0)),
+                GLib.VariantType("(u)"),
                 Gio.DBusCallFlags.NONE,
                 5000,
                 None,
-                self._on_session_created,
             )
+            self._action_id = result.unpack()[0]
+            if self._action_id > 0:
+                print("[hotkey] Ctrl+Shift+H registered (GNOME Shell accelerator)")
+            else:
+                print("[hotkey] Accelerator grab returned 0, may not work")
         except Exception as e:
-            print(f"[hotkey] Portal shortcut unavailable: {e}")
-            print("[hotkey] Use D-Bus fallback: dbus-send --session "
+            print(f"[hotkey] Could not register global shortcut: {e}")
+            print("[hotkey] Fallback: dbus-send --session "
                   "--dest=com.invisible.terminal "
                   "/com/invisible/terminal com.invisible.terminal.Toggle")
 
-    def _on_session_created(self, bus, result):
-        try:
-            res = bus.call_finish(result)
-            response = res.unpack()
-            if isinstance(response, tuple) and len(response) > 0:
-                results = response[0] if isinstance(response[0], dict) else {}
-                self._session_path = results.get("session_handle", "")
+    def _on_accelerator_activated(self, connection, sender, path, iface,
+                                   signal, params):
+        action_id = params[0]
+        if action_id == self._action_id:
+            GLib.idle_add(self.on_activate, "toggle")
 
-            if self._session_path:
-                shortcuts = GLib.Variant("a(sa{sv})", [
-                    ("panic-hide", {
-                        "description": GLib.Variant("s", "Toggle Invisible Terminal"),
-                        "preferred_trigger": GLib.Variant("s", "CTRL+SHIFT+H"),
-                    }),
-                ])
-                bus.call(
-                    PORTAL_BUS_NAME,
-                    PORTAL_OBJECT_PATH,
-                    GLOBAL_SHORTCUTS_IFACE,
-                    "BindShortcuts",
-                    GLib.Variant("(oa(sa{sv})sa{sv})", [
-                        self._session_path,
-                        [("panic-hide", {
-                            "description": GLib.Variant("s", "Toggle Invisible Terminal"),
-                            "preferred_trigger": GLib.Variant("s", "CTRL+SHIFT+H"),
-                        })],
-                        "",
-                        {},
-                    ]),
-                    None,
+    def cleanup(self):
+        if self._bus and self._action_id > 0:
+            try:
+                self._bus.call_sync(
+                    "org.gnome.Shell",
+                    "/org/gnome/Shell",
+                    "org.gnome.Shell",
+                    "UngrabAccelerator",
+                    GLib.Variant("(u)", (self._action_id,)),
+                    GLib.VariantType("(b)"),
                     Gio.DBusCallFlags.NONE,
                     5000,
                     None,
-                    self._on_shortcuts_bound,
                 )
-        except Exception as e:
-            print(f"[hotkey] Session creation failed: {e}")
-
-    def _on_shortcuts_bound(self, bus, result):
-        try:
-            bus.call_finish(result)
-            self._portal_working = True
-
-            bus.signal_subscribe(
-                PORTAL_BUS_NAME,
-                GLOBAL_SHORTCUTS_IFACE,
-                "Activated",
-                self._session_path,
-                None,
-                Gio.DBusSignalFlags.NONE,
-                self._on_shortcut_activated,
-            )
-            print("[hotkey] Global shortcut Ctrl+Shift+H registered via portal")
-        except Exception as e:
-            print(f"[hotkey] Shortcut binding failed: {e}")
-
-    def _on_shortcut_activated(self, connection, sender, path, iface,
-                                signal, params):
-        GLib.idle_add(self.on_activate, "toggle")
-
-    def cleanup(self):
+            except Exception:
+                pass
+        if self._bus and self._signal_sub_id:
+            self._bus.signal_unsubscribe(self._signal_sub_id)
         if self._dbus_owner_id:
             Gio.bus_unown_name(self._dbus_owner_id)
